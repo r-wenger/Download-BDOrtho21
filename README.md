@@ -73,7 +73,7 @@ python download_bdortho.py shapefile <input_shapefile> <department_geojson> <csv
 
 **Arguments**:
 - `input_shapefile`: Path to the shapefile containing the entities.
-- `department_geojson`: Path to the GeoJSON of the departments.
+- `department_geojson`: Path to the GeoJSON of the departments (contour-des-departements.geojson).
 - `csv_filename`: Path to the CSV file containing the download links.
 
 ## Example
