@@ -18,10 +18,16 @@ git clone https://github.com/yourusername/bdortho-downloader.git
 cd bdortho-downloader
 ```
 
-Install the required Python packages:
+- Python 3.x
+- `requests`
+- `beautifulsoup4`
+- `py7zr`
+- `geopandas`
+
+You can install the required packages using:
 
 ```bash
-pip install -r requirements.txt
+pip install requests beautifulsoup4 py7zr geopandas
 ```
 
 ## Usage
@@ -101,20 +107,6 @@ python download_bdortho.py shapefile <input_shapefile> <department_geojson> <csv
     ```bash
     python download_bdortho.py shapefile input.shp departments.geojson bdortho_download_links.csv
     ```
-
-## Requirements
-
-- Python 3.x
-- `requests`
-- `beautifulsoup4`
-- `py7zr`
-- `geopandas`
-
-You can install the required packages using:
-
-```bash
-pip install requests beautifulsoup4 py7zr geopandas
-```
 
 ## Acknowledgments
 
