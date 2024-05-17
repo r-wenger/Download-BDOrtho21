@@ -1,5 +1,3 @@
-# Download-BDOrtho21
-
 # BD ORTHO Data Downloader
 
 This Python script allows you to fetch, download, and process BD ORTHO data. It includes functionalities to retrieve download links, download files for specified regions, decompress the downloaded files, and download data based on spatial intersections with shapefiles.
