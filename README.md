@@ -1,6 +1,6 @@
 # BD ORTHO Data Downloader
 
-This Python script allows you to fetch, download, and process BD ORTHO data. It includes functionalities to retrieve download links, download files for specified regions, decompress the downloaded files, and download data based on spatial intersections with shapefiles.
+This Python script allows you to fetch, download, and process BD ORTHO data. It includes functionalities to retrieve download links, download files for specified regions, decompress the downloaded files, download data based on spatial intersections with shapefiles, and filter downloaded tiles based on spatial intersections.
 
 ## Features
 
@@ -8,6 +8,7 @@ This Python script allows you to fetch, download, and process BD ORTHO data. It 
 - **Download Data**: Download files from the links present in the CSV file for a specified region.
 - **Extract Files**: Decompress the downloaded .7z files for a specified region.
 - **Spatial Intersection**: Download data for departments intersected with a given shapefile.
+- **Filter Tiles**: Remove tiles that do not intersect with the reference shapefile from the downloaded data.
 
 ## Installation
 
@@ -82,6 +83,19 @@ python download_bdortho.py shapefile <input_shapefile> <department_geojson> <csv
 - `department_geojson`: Path to the GeoJSON of the departments (contour-des-departements.geojson).
 - `csv_filename`: Path to the CSV file containing the download links.
 
+### Filter Tiles
+
+Removes tiles that do not intersect with the reference shapefile from the downloaded data.
+
+```bash
+python download_bdortho.py filter <reference_shapefile> <tiles_shapefile> <data_directory>
+```
+
+**Arguments**:
+- `reference_shapefile`: Path to the reference shapefile.
+- `tiles_shapefile`: Path to the shapefile of the tiles (e.g., dalles.shp).
+- `data_directory`: Path to the directory containing the tile images.
+
 ## Example
 
 1. Fetch download links and save them in a CSV file:
@@ -106,6 +120,12 @@ python download_bdortho.py shapefile <input_shapefile> <department_geojson> <csv
 
     ```bash
     python download_bdortho.py shapefile input.shp departments.geojson bdortho_download_links.csv
+    ```
+
+5. Filter downloaded tiles to keep only those intersecting with the reference shapefile:
+
+    ```bash
+    python download_bdortho.py filter reference.shp dalles.shp /path/to/data_directory
     ```
 
 ## Acknowledgments
