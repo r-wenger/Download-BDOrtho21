@@ -15,8 +15,8 @@ This Python script allows you to fetch, download, and process BD ORTHO data. It 
 First, clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/bdortho-downloader.git
-cd bdortho-downloader
+git clone https://github.com/r-wenger/Download-BDOrtho21.git
+cd Download-BDOrtho21
 ```
 
 - Python 3.x
