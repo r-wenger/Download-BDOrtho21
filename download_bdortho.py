@@ -7,6 +7,7 @@ import argparse
 import geopandas as gpd
 import logging
 from tqdm import tqdm
+import multivolumefile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -74,19 +75,24 @@ def extract_and_merge_7z_files(region):
     if not os.path.exists(region_dir):
         logging.error(f"Directory {region_dir} does not exist.")
         return
-    
-    files = sorted([os.path.join(region_dir, f) for f in os.listdir(region_dir) if f.endswith('.7z')])
 
-    if not files:
-        logging.info(f"No .7z files found in {region_dir}")
+    base_names = set()
+    for filename in os.listdir(region_dir):
+        if filename.endswith(".7z.001"):
+            base_name = filename[:-7]
+            base_names.add(base_name)
+
+    if not base_names:
+        logging.info(f"No .7z.001 files found in {region_dir}")
         return
 
     try:
-        for file in tqdm(files, desc=f"Extracting files for region {region}"):
-            with py7zr.SevenZipFile(file, mode='r') as archive:
-                archive.extractall(path=region_dir)
+        for base_name in tqdm(base_names, desc=f"Extracting files for region {region}"):
+            with multivolumefile.open(os.path.join(region_dir, base_name + ".7z"), mode='rb') as target_archive:
+                with py7zr.SevenZipFile(target_archive, 'r') as archive:
+                    archive.extractall(path=region_dir)
         logging.info(f"Decompression completed for region {region}")
-    except py7zr.ArchiveError as e:
+    except py7zr.Bad7zFile as e:
         logging.error(f"Error during extraction: {e}")
 
 def prepare_data_based_on_shapefiles(input_shapefile, department_geojson, csv_filename):
