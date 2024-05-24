@@ -24,11 +24,12 @@ cd bdortho-downloader
 - `beautifulsoup4`
 - `py7zr`
 - `geopandas`
+- `multivolume`
 
 You can install the required packages using:
 
 ```bash
-pip install requests beautifulsoup4 py7zr geopandas
+pip install requests beautifulsoup4 py7zr geopandas multivolume
 ```
 
 ## Usage
