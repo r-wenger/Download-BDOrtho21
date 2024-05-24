@@ -24,12 +24,12 @@ cd Download-BDOrtho21
 - `beautifulsoup4`
 - `py7zr`
 - `geopandas`
-- `multivolume`
+- `multivolumefile`
 
 You can install the required packages using:
 
 ```bash
-pip install requests beautifulsoup4 py7zr geopandas multivolume
+pip install requests beautifulsoup4 py7zr geopandas multivolumefile
 ```
 
 ## Usage
