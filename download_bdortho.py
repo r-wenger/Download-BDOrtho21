@@ -6,32 +6,40 @@ import py7zr
 import argparse
 import geopandas as gpd
 import logging
+from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def fetch_download_links(url, csv_filename):
+def fetch_download_links(url, csv_filename, year, type_filter):
     try:
         response = requests.get(url)
         response.raise_for_status()  # Raise HTTPError for bad responses
         soup = BeautifulSoup(response.content, 'html.parser')
+        links = []
+        departments = []
+        codes = []
+        title = soup.find('h3', id='bd-ortho-dernière-édition')
+        if title:
+            for sibling in title.find_next_siblings():
+                if sibling.name == 'p' and 'Département' in sibling.get_text():
+                    department_info = sibling.get_text(strip=True)
+                    department_name = department_info.split(' - ')[1]
+                    department_code = department_info.split(' - ')[0].split()[-1]
+                elif sibling.name == 'ul':
+                    for link in sibling.find_all('a', href=True):
+                        download_link = link['href']
+                        if f"_{year}-" in download_link and type_filter in download_link:
+                            links.append(download_link)
+                            departments.append(department_name)
+                            codes.append(department_code)
         with open(csv_filename, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(['Department', 'Code', 'Link'])
-            title = soup.find('h3', id='bd-ortho-dernière-édition')
-            if title:
-                for sibling in title.find_next_siblings():
-                    if sibling.name == 'p' and 'Département' in sibling.get_text():
-                        department_info = sibling.get_text(strip=True)
-                        department_name = department_info.split(' - ')[1]
-                        department_code = department_info.split(' - ')[0].split()[-1]
-                    elif sibling.name == 'ul':
-                        for link in sibling.find_all('a', href=True):
-                            download_link = link['href']
-                            writer.writerow([department_name, department_code, download_link])
-        logging.info(f"Download links have been saved in '{csv_filename}'.")
+            for department, code, link in tqdm(zip(departments, codes, links), total=len(links), desc="Fetching links"):
+                writer.writerow([department, code, link])
+        logging.info(f"Download links for the year {year} and type {type_filter} have been saved in '{csv_filename}'.")
     except requests.exceptions.RequestException as e:
         logging.error(f"HTTP request error: {e}")
-
 
 def download_data_from_csv(csv_path, region):
     links = []
@@ -48,7 +56,7 @@ def download_data_from_csv(csv_path, region):
     region_dir = os.path.join('downloads', region)
     os.makedirs(region_dir, exist_ok=True)
 
-    for link in links:
+    for link in tqdm(links, desc=f"Downloading files for region {region}"):
         filename = os.path.join(region_dir, os.path.basename(link))
         try:
             logging.info(f"Downloading {link} to {filename}")
@@ -60,7 +68,6 @@ def download_data_from_csv(csv_path, region):
             logging.info(f"Successfully downloaded {filename}")
         except requests.exceptions.RequestException as e:
             logging.error(f"Error downloading {link}: {e}")
-
 
 def extract_and_merge_7z_files(region):
     region_dir = os.path.join('downloads', region)
@@ -75,13 +82,12 @@ def extract_and_merge_7z_files(region):
         return
 
     try:
-        for file in files:
+        for file in tqdm(files, desc=f"Extracting files for region {region}"):
             with py7zr.SevenZipFile(file, mode='r') as archive:
                 archive.extractall(path=region_dir)
         logging.info(f"Decompression completed for region {region}")
     except py7zr.ArchiveError as e:
         logging.error(f"Error during extraction: {e}")
-
 
 def prepare_data_based_on_shapefiles(input_shapefile, department_geojson, csv_filename):
     """
@@ -113,7 +119,6 @@ def prepare_data_based_on_shapefiles(input_shapefile, department_geojson, csv_fi
 
     for code in department_codes:
         download_data_from_csv(csv_filename, code)
-
 
 def filter_tiles_by_intersection(reference_shapefile, tiles_shapefile, data_directory):
     """
@@ -152,7 +157,6 @@ def filter_tiles_by_intersection(reference_shapefile, tiles_shapefile, data_dire
             os.remove(tile_file)
             logging.info(f"Removed tile {tile_file}")
 
-
 def main():
     parser = argparse.ArgumentParser(description="Download and process BD ORTHO data.")
     subparsers = parser.add_subparsers(dest='command')
@@ -160,6 +164,8 @@ def main():
     parser_fetch = subparsers.add_parser('fetch', help="Fetches download links and saves them in a CSV file.")
     parser_fetch.add_argument('url', type=str, help="URL of the webpage to parse")
     parser_fetch.add_argument('csv_filename', type=str, help="Name of the CSV file to create")
+    parser_fetch.add_argument('--year', type=int, default=2021, help="Year of the data to download")
+    parser_fetch.add_argument('--type', type=str, choices=['RVB', 'IRC'], default='RVB', help="Type of the data to download")
 
     parser_download = subparsers.add_parser('download', help="Downloads files from the links in the CSV for the specified region.")
     parser_download.add_argument('csv_path', type=str, help="Path to the CSV file")
@@ -181,7 +187,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'fetch':
-        fetch_download_links(args.url, args.csv_filename)
+        fetch_download_links(args.url, args.csv_filename, args.year, args.type)
     elif args.command == 'download':
         download_data_from_csv(args.csv_path, args.region)
     elif args.command == 'extract':
