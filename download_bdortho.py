@@ -11,36 +11,56 @@ import multivolumefile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def fetch_download_links(url, csv_filename, year, type_filter):
+
+import requests
+from bs4 import BeautifulSoup
+import csv
+from tqdm import tqdm
+import logging
+
+
+def fetch_download_links(url, csv_filename, type_filter):
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raise HTTPError for bad responses
+        response.raise_for_status()  # Raise HTTPError pour les mauvaises réponses
         soup = BeautifulSoup(response.content, 'html.parser')
-        links = []
-        departments = []
-        codes = []
+        links = {}
+        
+        # Chercher le titre de la dernière édition
         title = soup.find('h3', id='bd-ortho-dernière-édition')
         if title:
             for sibling in title.find_next_siblings():
+                if sibling.name == 'h3' and sibling.get('id') == 'bd-ortho-anciennes-éditions':
+                    break  # Arrêter si on atteint la section des anciennes éditions
                 if sibling.name == 'p' and 'Département' in sibling.get_text():
                     department_info = sibling.get_text(strip=True)
-                    department_name = department_info.split(' - ')[1]
-                    department_code = department_info.split(' - ')[0].split()[-1]
-                elif sibling.name == 'ul':
+                    parts = department_info.split(' ')
+                    department_code = None
+                    for part in parts:
+                        if part.isdigit():
+                            department_code = part
+                            break
+                elif sibling.name == 'ul' and department_code:
+                    if department_code not in links:
+                        links[department_code] = []
                     for link in sibling.find_all('a', href=True):
                         download_link = link['href']
-                        if f"_{year}-" in download_link and type_filter in download_link:
-                            links.append(download_link)
-                            departments.append(department_name)
-                            codes.append(department_code)
-        with open(csv_filename, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Department', 'Code', 'Link'])
-            for department, code, link in tqdm(zip(departments, codes, links), total=len(links), desc="Fetching links"):
-                writer.writerow([department, code, link])
-        logging.info(f"Download links for the year {year} and type {type_filter} have been saved in '{csv_filename}'.")
+                        if type_filter in download_link:
+                            links[department_code].append(download_link)
+        
+        if not links:
+            logging.warning(f"Aucun lien de téléchargement trouvé pour le type {type_filter}.")
+        else:
+            with open(csv_filename, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Code', 'Link'])
+                for department_code, department_links in tqdm(links.items(), desc="Fetching links"):
+                    for link in department_links:
+                        writer.writerow([department_code, link])
+            logging.info(f"Les liens de téléchargement pour le type {type_filter} ont été sauvegardés dans '{csv_filename}'.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"HTTP request error: {e}")
+        logging.error(f"Erreur de requête HTTP : {e}")
+
 
 def download_data_from_csv(csv_path, region):
     links = []
@@ -48,7 +68,7 @@ def download_data_from_csv(csv_path, region):
         with open(csv_path, mode='r', newline='', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             for row in reader:
-                if row['Code'] == region or row['Department'] == region:
+                if row['Code'] == region:
                     links.append(row['Link'])
     except FileNotFoundError:
         logging.error(f"CSV file {csv_path} not found.")
@@ -170,7 +190,6 @@ def main():
     parser_fetch = subparsers.add_parser('fetch', help="Fetches download links and saves them in a CSV file.")
     parser_fetch.add_argument('url', type=str, help="URL of the webpage to parse")
     parser_fetch.add_argument('csv_filename', type=str, help="Name of the CSV file to create")
-    parser_fetch.add_argument('--year', type=int, default=2021, help="Year of the data to download")
     parser_fetch.add_argument('--type', type=str, choices=['RVB', 'IRC'], default='RVB', help="Type of the data to download")
 
     parser_download = subparsers.add_parser('download', help="Downloads files from the links in the CSV for the specified region.")
@@ -193,7 +212,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'fetch':
-        fetch_download_links(args.url, args.csv_filename, args.year, args.type)
+        fetch_download_links(args.url, args.csv_filename, args.type)
     elif args.command == 'download':
         download_data_from_csv(args.csv_path, args.region)
     elif args.command == 'extract':
